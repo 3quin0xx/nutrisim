@@ -13,8 +13,8 @@ class SimulationViewModel : ViewModel() {
 
     fun loadDefaultSampleMeal() {
         val initialItems = listOf(
-            SimulatedItem(IndianMarketCatalog.CHICKEN_BREAST, 200f),
-            SimulatedItem(IndianMarketCatalog.DAL_LENTILS, 80f)
+            SimulatedItem(ingredient = IndianMarketCatalog.CHICKEN_BREAST, weightGrams = 200f),
+            SimulatedItem(ingredient = IndianMarketCatalog.DAL_LENTILS, weightGrams = 80f)
         )
         _uiState.value = buildComputedState(initialItems, setOf(AminoAcid.LEUCINE))
     }
