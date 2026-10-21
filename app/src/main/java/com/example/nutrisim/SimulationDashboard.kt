@@ -88,7 +88,6 @@ fun SimulationDashboard(viewModel: SimulationViewModel = viewModel()) {
                             }
                         }
                         
-                        // RESTORED LOCAL/MANUAL PRICE ADJUSTMENT
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(selected = item.pricingMode == PricingMode.LOCAL_MARKET, onClick = { viewModel.updateItemPricingMode(item.instanceId, PricingMode.LOCAL_MARKET) }, label = { Text("Local Market") })
                             FilterChip(selected = item.pricingMode == PricingMode.MANUAL, onClick = { viewModel.updateItemPricingMode(item.instanceId, PricingMode.MANUAL) }, label = { Text("Manual Price") })
@@ -187,7 +186,7 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
 }
 
 suspend fun fetchNutrition(query: String, apiKey: String): Map<String, Double> = withContext(Dispatchers.IO) {
-    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
     val url = URL(urlStr)
     val conn = url.openConnection() as HttpURLConnection
     conn.requestMethod = "POST"
