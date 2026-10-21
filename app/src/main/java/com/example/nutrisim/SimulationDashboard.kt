@@ -130,12 +130,10 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
                     Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("✨ AI Auto-Estimate", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
                         
-                        if (apiKey.isBlank()) {
-                            OutlinedTextField(value = apiKey, onValueChange = { apiKey = it }, label = { Text("Paste Gemini API Key (Saved securely)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                        }
+                        OutlinedTextField(value = apiKey, onValueChange = { apiKey = it }, label = { Text("Gemini API Key") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Food Query (e.g. 2 Chapatis)") }, singleLine = true, modifier = Modifier.weight(1f))
+                            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Food Query (e.g. 4 Chapatis)") }, singleLine = true, modifier = Modifier.weight(1f))
                             Button(
                                 onClick = {
                                     if (apiKey.isBlank() || name.isBlank()) { errorMsg = "Need Key & Food"; return@Button }
