@@ -1,5 +1,4 @@
 package com.example.nutrisim.ui
-
 import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -141,7 +140,6 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
                                 onClick = {
                                     if (apiKey.isBlank() || name.isBlank()) { errorMsg = "Need Key & Food"; return@Button }
                                     
-                                    // Securely save the key to the phone's internal storage
                                     prefs.edit().putString("gemini_key", apiKey.trim()).apply()
                                     
                                     isFetching = true; errorMsg = null
