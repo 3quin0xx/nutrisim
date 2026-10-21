@@ -5,7 +5,7 @@
         android:icon="@android:ic_menu_compass"
         android:label="NutriSim India"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <activity
             android:name=".MainActivity"
             android:exported="true">
