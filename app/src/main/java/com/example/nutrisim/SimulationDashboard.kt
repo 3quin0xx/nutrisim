@@ -39,10 +39,7 @@ fun SimulationDashboard(viewModel: SimulationViewModel = viewModel()) {
     if (showDialog) {
         CustomFoodDialog(
             onDismiss = { showDialog = false },
-            onAdd = { name, price, cals, prot, carbs, fats ->
-                viewModel.addCustomIngredient(name, price, cals, prot, carbs, fats)
-                showDialog = false
-            }
+            onAdd = { n, p, c, pr, cb, f -> viewModel.addCustomIngredient(n, p, c, pr, cb, f); showDialog = false }
         )
     }
 
@@ -90,6 +87,16 @@ fun SimulationDashboard(viewModel: SimulationViewModel = viewModel()) {
                                 IconButton(onClick = { viewModel.removeIngredientFromMeal(item.instanceId) }) { Icon(Icons.Default.DeleteOutline, "Remove", tint = MaterialTheme.colorScheme.error) }
                             }
                         }
+                        
+                        // RESTORED LOCAL/MANUAL PRICE ADJUSTMENT
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(selected = item.pricingMode == PricingMode.LOCAL_MARKET, onClick = { viewModel.updateItemPricingMode(item.instanceId, PricingMode.LOCAL_MARKET) }, label = { Text("Local Market") })
+                            FilterChip(selected = item.pricingMode == PricingMode.MANUAL, onClick = { viewModel.updateItemPricingMode(item.instanceId, PricingMode.MANUAL) }, label = { Text("Manual Price") })
+                        }
+                        AnimatedVisibility(visible = item.pricingMode == PricingMode.MANUAL) {
+                            Slider(value = item.manualPricePerKg.toFloat(), onValueChange = { viewModel.updateItemManualPrice(item.instanceId, (it / 5f).roundToInt() * 5.0) }, valueRange = 0f..2000f)
+                        }
+
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("${item.calculatedCalories.roundToInt()} kcal", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             Text(String.format(Locale.US, "P: %.1fg", item.calculatedProtein), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
@@ -130,19 +137,31 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
                 Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(8.dp)) {
                     Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("✨ AI Auto-Estimate", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        
                         OutlinedTextField(value = apiKey, onValueChange = { apiKey = it }, label = { Text("Gemini API Key") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Food Query (e.g. 4 Chapatis)") }, singleLine = true, modifier = Modifier.weight(1f))
                             Button(
                                 onClick = {
                                     if (apiKey.isBlank() || name.isBlank()) { errorMsg = "Need Key & Food"; return@Button }
+                                    
                                     prefs.edit().putString("gemini_key", apiKey.trim()).apply()
                                     isFetching = true; errorMsg = null
+                                    
                                     scope.launch {
-                                        val res = fetchNutrition(name, apiKey.trim())
-                                        if (res != null) { price = res["price"].toString(); cals = res["cals"].toString(); prot = res["prot"].toString(); carb = res["carb"].toString(); fats = res["fats"].toString() } 
-                                        else errorMsg = "Connection Error. Check key."
-                                        isFetching = false
+                                        try {
+                                            val res = fetchNutrition(name, apiKey.trim())
+                                            price = res["price"].toString()
+                                            cals = res["cals"].toString()
+                                            prot = res["prot"].toString()
+                                            carb = res["carb"].toString()
+                                            fats = res["fats"].toString()
+                                        } catch (e: Exception) {
+                                            errorMsg = e.message ?: "Unknown Error"
+                                        } finally {
+                                            isFetching = false
+                                        }
                                     }
                                 }, enabled = !isFetching
                             ) { Text(if (isFetching) "..." else "Fetch") }
@@ -150,6 +169,7 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
                         if (errorMsg != null) Text(errorMsg!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
                     }
                 }
+                
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top=8.dp)) {
                     OutlinedTextField(value = cals, onValueChange = { cals = it }, label = { Text("Cals") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
                     OutlinedTextField(value = prot, onValueChange = { prot = it }, label = { Text("Prot(g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f), singleLine = true)
@@ -166,26 +186,32 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
     )
 }
 
-suspend fun fetchNutrition(query: String, apiKey: String): Map<String, Double>? = withContext(Dispatchers.IO) {
-    try {
-        val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent")
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", "application/json")
-        conn.setRequestProperty("x-goog-api-key", apiKey)
-        conn.doOutput = true
-        
-        val prompt = "Estimate nutritional value for: $query. Return ONLY raw JSON with these exact keys: 'price' (estimated price in INR), 'cals' (calories), 'prot' (protein in g), 'carb' (carbohydrates in g), 'fats' (fats in g). Do not include markdown formatting or any other text."
-        val jsonPayload = """{"contents": [{"parts": [{"text": "$prompt"}]}],"generationConfig": {"responseMimeType": "application/json"}}"""
-        
-        conn.outputStream.use { os -> os.write(jsonPayload.toByteArray(Charsets.UTF_8)) }
-        
-        if (conn.responseCode == 200) {
-            val response = conn.inputStream.bufferedReader().readText()
+suspend fun fetchNutrition(query: String, apiKey: String): Map<String, Double> = withContext(Dispatchers.IO) {
+    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+    val url = URL(urlStr)
+    val conn = url.openConnection() as HttpURLConnection
+    conn.requestMethod = "POST"
+    conn.setRequestProperty("Content-Type", "application/json")
+    conn.setRequestProperty("x-goog-api-key", apiKey)
+    conn.doOutput = true
+    
+    val prompt = "Estimate nutritional value for: $query. Return ONLY raw JSON with exact keys: 'price' (estimated price in INR), 'cals' (calories), 'prot' (protein in g), 'carb' (carbohydrates in g), 'fats' (fats in g). No markdown, no text."
+    val jsonPayload = """{"contents": [{"parts": [{"text": "$prompt"}]}],"generationConfig": {"responseMimeType": "application/json"}}"""
+    
+    conn.outputStream.use { os -> os.write(jsonPayload.toByteArray(Charsets.UTF_8)) }
+    
+    if (conn.responseCode == 200) {
+        val response = conn.inputStream.bufferedReader().readText()
+        try {
             val data = JSONObject(JSONObject(response).getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text").replace("```json", "").replace("```", "").trim())
             mapOf("price" to data.optDouble("price", 0.0), "cals" to data.optDouble("cals", 0.0), "prot" to data.optDouble("prot", 0.0), "carb" to data.optDouble("carb", 0.0), "fats" to data.optDouble("fats", 0.0))
-        } else null
-    } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            throw Exception("Failed to parse AI JSON response")
+        }
+    } else {
+        val err = conn.errorStream?.bufferedReader()?.readText() ?: "No error stream"
+        throw Exception("API Error ${conn.responseCode}: $err".take(100))
+    }
 }
 
 @Composable
