@@ -186,12 +186,14 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
 }
 
 suspend fun fetchNutrition(query: String, apiKey: String): Map<String, Double> = withContext(Dispatchers.IO) {
-    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+    // 1. Switched to 1.5 Pro Latest for higher intelligence
+    // 2. Removed ?key= from the URL to stop routing errors
+    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent"
     val url = URL(urlStr)
     val conn = url.openConnection() as HttpURLConnection
     conn.requestMethod = "POST"
     conn.setRequestProperty("Content-Type", "application/json")
-    conn.setRequestProperty("x-goog-api-key", apiKey)
+    conn.setRequestProperty("x-goog-api-key", apiKey) // Passed ONLY via header
     conn.doOutput = true
     
     val prompt = "Estimate nutritional value for: $query. Return ONLY raw JSON with exact keys: 'price' (estimated price in INR), 'cals' (calories), 'prot' (protein in g), 'carb' (carbohydrates in g), 'fats' (fats in g). No markdown, no text."
