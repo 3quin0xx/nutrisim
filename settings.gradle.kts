@@ -1,4 +1,4 @@
-pluginManagement {
+luginManagement {
     repositories {
         google()
         mavenCentral()
@@ -12,5 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+
 rootProject.name = "NutriSim India"
 include(":app")

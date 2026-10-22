@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer saffron glow ring -->
+    <path
+        android:fillColor="#FF8F00"
+        android:pathData="M54,8 C28.6,8 8,28.6 8,54 C8,79.4 28.6,100 54,100 C79.4,100 100,79.4 100,54 C100,28.6 79.4,8 54,8Z"/>
+    <!-- Dark inner circle -->
+    <path
+        android:fillColor="#0A1628"
+        android:pathData="M54,14 C32,14 14,32 14,54 C14,76 32,94 54,94 C76,94 94,76 94,54 C94,32 76,14 54,14Z"/>
+    <!-- Green leaf body -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M54,22 C43,32 32,46 36,63 C40,80 51,86 54,86 C57,86 68,80 72,63 C76,46 65,32 54,22Z"/>
+    <!-- Leaf highlight -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M54,22 C47,32 39,46 43,63 C45,72 50,79 54,82 C51,75 48,66 50,57 C52,46 53,34 54,22Z"/>
+    <!-- Central vein -->
+    <path
+        android:strokeColor="#81C784"
+        android:strokeWidth="2.0"
+        android:pathData="M54,28 L54,82"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Left vein -->
+    <path
+        android:strokeColor="#81C784"
+        android:strokeWidth="1.5"
+        android:pathData="M54,42 C48,44 42,52 40,58"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Right vein -->
+    <path
+        android:strokeColor="#81C784"
+        android:strokeWidth="1.5"
+        android:pathData="M54,54 C60,56 66,62 68,68"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Small saffron dot accent -->
+    <path
+        android:fillColor="#FF8F00"
+        android:pathData="M54,50 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+</vector>
