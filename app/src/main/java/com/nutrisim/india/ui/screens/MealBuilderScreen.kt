@@ -52,10 +52,8 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
     ) {
         item { Text("Meal Builder", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary) }
 
-        // ── Gemini AI card ─────────────────────────────────────────────────
         item { AiCard(viewModel = viewModel) }
 
-        // ── Search ─────────────────────────────────────────────────────────
         item {
             OutlinedTextField(
                 value = searchText,
@@ -75,7 +73,6 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
             )
         }
 
-        // ── Category chips ─────────────────────────────────────────────────
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
@@ -103,12 +100,10 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
             }
         }
 
-        // ── Selected food panel ────────────────────────────────────────────
         state.selectedFood?.let { food ->
             item { FoodDetailPanel(food = food, viewModel = viewModel) }
         }
 
-        // ── Food list ──────────────────────────────────────────────────────
         items(filteredFoods) { food ->
             FoodRow(
                 food       = food,
@@ -150,6 +145,11 @@ private fun FoodRow(food: FoodItem, isSelected: Boolean, onClick: () -> Unit) {
 private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
     val state by viewModel.state.collectAsState()
 
+    var customPriceText by remember(food.id) {
+        val def = food.defaultPriceINRPer100
+        mutableStateOf(if (def % 1f == 0f) def.toInt().toString() else def.toString())
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -161,7 +161,6 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
 
             Text("${food.emoji} ${food.name}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
 
-            // ── Piece counter or gram slider ───────────────────────────────
             if (food.unit == FoodUnit.PIECES) {
                 Text("How many pieces?", fontSize = 13.sp, color = TextSecondary)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -190,7 +189,6 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                         inactiveTrackColor= DividerDark
                     )
                 )
-                // Preset chips
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(50f, 100f, 150f, 200f, 300f).forEach { p ->
                         AssistChip(
@@ -204,7 +202,6 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 }
             }
 
-            // ── Custom price toggle ────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -220,7 +217,13 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 Switch(
                     checked  = state.useCustomPrice,
                     onCheckedChange = { on ->
-                        viewModel.setCustomPrice(if (on) food.defaultPriceINRPer100 else null)
+                        if (on) {
+                            val def = food.defaultPriceINRPer100
+                            customPriceText = if (def % 1f == 0f) def.toInt().toString() else def.toString()
+                            viewModel.setCustomPrice(def)
+                        } else {
+                            viewModel.setCustomPrice(null)
+                        }
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Saffron,
@@ -231,8 +234,13 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
 
             if (state.useCustomPrice) {
                 OutlinedTextField(
-                    value = state.customPriceInput?.toString() ?: "",
-                    onValueChange = { viewModel.setCustomPrice(it.toFloatOrNull()) },
+                    value = customPriceText,
+                    onValueChange = { input ->
+                        if (input.isEmpty() || input.matches(Regex("^\\d*\\.?\\d*$"))) {
+                            customPriceText = input
+                            viewModel.setCustomPrice(input.toFloatOrNull() ?: 0f)
+                        }
+                    },
                     label = { Text("₹ per 100g", color = TextSecondary) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -243,7 +251,6 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 )
             }
 
-            // ── Live macro preview ─────────────────────────────────────────
             val sf = state.quantity / 100f
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(
@@ -267,7 +274,7 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 }
             }
 
-            val displayPrice = if (state.useCustomPrice) state.customPriceInput ?: food.defaultPriceINRPer100 else food.defaultPriceINRPer100
+            val displayPrice = if (state.useCustomPrice) state.customPriceInput ?: 0f else food.defaultPriceINRPer100
             Text("Cost: ₹${String.format("%.1f", displayPrice * sf)}", fontSize = 13.sp, color = AccentGold, fontWeight = FontWeight.SemiBold)
 
             Button(

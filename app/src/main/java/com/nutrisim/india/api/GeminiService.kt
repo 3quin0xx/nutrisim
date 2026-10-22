@@ -19,12 +19,12 @@ class GeminiService {
 
     private val gson = Gson()
 
-    // Up-to-date Gemini 3.5 / 3.8 and 2.5 Flash endpoints with automatic fallback
+    // Active Gemini Flash models (automatically falls back if one is unavailable)
     private val MODELS = listOf(
-        "gemini-3.8-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-3.6-flash",
-        "gemini-2.5-flash"
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-flash-latest"
     )
 
     suspend fun estimateMacros(query: String, apiKey: String): Result<GeminiFoodResult> =
@@ -73,7 +73,7 @@ class GeminiService {
                     if (!response.isSuccessful) {
                         lastError = Exception("Gemini API error ${response.code}: $responseBody")
                         if (response.code == 404 || response.code == 503 || response.code == 429) {
-                            continue // Try the next model in the list
+                            continue
                         }
                         return@withContext Result.failure(lastError)
                     }
@@ -83,6 +83,7 @@ class GeminiService {
                         ?.firstOrNull()?.content?.parts?.firstOrNull()?.text
                         ?: return@withContext Result.failure(Exception("No content in Gemini response"))
 
+                    // Strip any accidental markdown fences
                     val cleanJson = rawText
                         .replace("```json", "")
                         .replace("```", "")
@@ -109,6 +110,7 @@ class GeminiService {
             Result.failure(lastError)
         }
 
+    // ── Internal response shape ───────────────────────────────────────────────
     private data class GeminiApiResponse(val candidates: List<Candidate>?)
     private data class Candidate(val content: Content?)
     private data class Content(val parts: List<Part>?)
