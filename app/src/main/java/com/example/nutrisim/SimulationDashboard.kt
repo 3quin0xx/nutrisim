@@ -188,7 +188,7 @@ fun CustomFoodDialog(onDismiss: () -> Unit, onAdd: (String, Double, Double, Doub
 suspend fun fetchNutrition(query: String, apiKey: String): Map<String, Double> = withContext(Dispatchers.IO) {
     // 1. Switched to 1.5 Pro Latest for higher intelligence
     // 2. Removed ?key= from the URL to stop routing errors
-    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent"
+    val urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
     val url = URL(urlStr)
     val conn = url.openConnection() as HttpURLConnection
     conn.requestMethod = "POST"
