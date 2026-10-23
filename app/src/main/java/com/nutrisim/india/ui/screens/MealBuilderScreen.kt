@@ -36,6 +36,8 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
     var selectedCategory by remember { mutableStateOf<FoodCategory?>(null) }
     var searchText by remember { mutableStateOf("") }
 
+    val categories = remember { FoodCategory.values().toList() }
+
     val filteredFoods = remember(selectedCategory, searchText) {
         FoodCatalog.items.filter { food ->
             (selectedCategory == null || food.category == selectedCategory) &&
@@ -47,14 +49,17 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { Text("Meal Builder", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary) }
+        item(key = "header") {
+            Text("Meal Builder", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        }
 
-        item { AiCard(viewModel = viewModel) }
+        item(key = "ai_card") { AiCard(viewModel = viewModel) }
 
-        item {
+        item(key = "search_bar") {
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
@@ -73,9 +78,9 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
             )
         }
 
-        item {
+        item(key = "category_chips") {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
+                item(key = "cat_all") {
                     FilterChip(
                         selected = selectedCategory == null,
                         onClick  = { selectedCategory = null },
@@ -86,7 +91,7 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
                         )
                     )
                 }
-                items(FoodCategory.values().toList()) { cat ->
+                items(categories, key = { it.name }) { cat ->
                     FilterChip(
                         selected = selectedCategory == cat,
                         onClick  = { selectedCategory = if (selectedCategory == cat) null else cat },
@@ -101,28 +106,29 @@ fun MealBuilderScreen(viewModel: NutriViewModel) {
         }
 
         state.selectedFood?.let { food ->
-            item { FoodDetailPanel(food = food, viewModel = viewModel) }
+            item(key = "detail_${food.id}") {
+                FoodDetailPanel(food = food, viewModel = viewModel)
+            }
         }
 
-        items(filteredFoods) { food ->
+        items(filteredFoods, key = { it.id }) { food ->
             FoodRow(
                 food       = food,
                 isSelected = state.selectedFood?.id == food.id,
                 onClick    = { viewModel.selectFood(food) }
             )
         }
-
-        item { Spacer(Modifier.height(80.dp)) }
     }
 }
 
 @Composable
 private fun FoodRow(food: FoodItem, isSelected: Boolean, onClick: () -> Unit) {
+    val bgColor = remember(isSelected) { if (isSelected) Saffron.copy(alpha = 0.14f) else CardDark }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) Saffron.copy(alpha = 0.14f) else CardDark)
+            .background(bgColor)
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
@@ -144,6 +150,9 @@ private fun FoodRow(food: FoodItem, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
     val state by viewModel.state.collectAsState()
+
+    // Local slider state prevents full-screen recomposition lag while dragging
+    var localWeight by remember(food.id, state.quantity) { mutableStateOf(state.quantity) }
 
     var customPriceText by remember(food.id) {
         val def = food.defaultPriceINRPer100
@@ -175,27 +184,31 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                     IconButton(onClick = { viewModel.setPieceCount(state.pieceCount + 1) }) {
                         Icon(Icons.Default.Add, null, tint = Saffron)
                     }
-                    Text("= ${state.quantity.toInt()}g", fontSize = 13.sp, color = TextSecondary)
+                    Text("= ${localWeight.toInt()}g", fontSize = 13.sp, color = TextSecondary)
                 }
             } else {
-                Text("Weight: ${state.quantity.toInt()}g", fontSize = 13.sp, color = TextSecondary)
+                Text("Weight: ${localWeight.toInt()}g", fontSize = 13.sp, color = TextSecondary)
                 Slider(
-                    value         = state.quantity,
-                    onValueChange = { viewModel.setQuantity(it) },
-                    valueRange    = 10f..500f,
-                    colors        = SliderDefaults.colors(
-                        thumbColor        = Saffron,
-                        activeTrackColor  = Saffron,
-                        inactiveTrackColor= DividerDark
+                    value = localWeight,
+                    onValueChange = { localWeight = it },
+                    onValueChangeFinished = { viewModel.setQuantity(localWeight) },
+                    valueRange = 10f..500f,
+                    colors = SliderDefaults.colors(
+                        thumbColor         = Saffron,
+                        activeTrackColor   = Saffron,
+                        inactiveTrackColor = DividerDark
                     )
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(50f, 100f, 150f, 200f, 300f).forEach { p ->
                         AssistChip(
-                            onClick = { viewModel.setQuantity(p) },
+                            onClick = {
+                                localWeight = p
+                                viewModel.setQuantity(p)
+                            },
                             label = { Text("${p.toInt()}g", fontSize = 11.sp) },
                             colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (state.quantity == p) Saffron.copy(0.25f) else CardDark
+                                containerColor = if (localWeight.toInt() == p.toInt()) Saffron.copy(0.25f) else CardDark
                             )
                         )
                     }
@@ -215,7 +228,7 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                     )
                 }
                 Switch(
-                    checked  = state.useCustomPrice,
+                    checked = state.useCustomPrice,
                     onCheckedChange = { on ->
                         if (on) {
                             val def = food.defaultPriceINRPer100
@@ -251,13 +264,13 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 )
             }
 
-            val sf = state.quantity / 100f
+            val sf = localWeight / 100f
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(
-                    Triple("Cal",  food.caloriesPer100 * sf, CaloriesColor),
-                    Triple("P",    food.proteinPer100  * sf, ProteinColor),
-                    Triple("C",    food.carbsPer100    * sf, CarbsColor),
-                    Triple("F",    food.fatsPer100     * sf, FatsColor)
+                    Triple("Cal", food.caloriesPer100 * sf, CaloriesColor),
+                    Triple("P",   food.proteinPer100  * sf, ProteinColor),
+                    Triple("C",   food.carbsPer100    * sf, CarbsColor),
+                    Triple("F",   food.fatsPer100     * sf, FatsColor)
                 ).forEach { (label, value, color) ->
                     Box(
                         modifier = Modifier.weight(1f)
@@ -278,7 +291,10 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
             Text("Cost: ₹${String.format("%.1f", displayPrice * sf)}", fontSize = 13.sp, color = AccentGold, fontWeight = FontWeight.SemiBold)
 
             Button(
-                onClick = { viewModel.addMealEntry() },
+                onClick = {
+                    viewModel.setQuantity(localWeight)
+                    viewModel.addMealEntry()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Saffron),
                 shape  = RoundedCornerShape(12.dp)

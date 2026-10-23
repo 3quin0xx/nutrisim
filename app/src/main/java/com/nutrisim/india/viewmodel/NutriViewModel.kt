@@ -11,7 +11,17 @@ import com.nutrisim.india.utils.PrefsManager
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// ─── UI State ──────────────────────────────────────────────────────────────────
+enum class PlanGoal(val label: String, val targetCal: Float, val targetProt: Float, val emoji: String) {
+    WEIGHT_LOSS("Weight Loss", 1600f, 130f, "🔥"),
+    WEIGHT_GAIN("Weight Gain", 2800f, 160f, "💪")
+}
+
+enum class DietPreference(val label: String, val emoji: String) {
+    PURE_VEG("Pure Veg", "🌱"),
+    NON_VEG("Non-Veg", "🍗"),
+    BOTH("Veg + Non-Veg", "🍱")
+}
+
 data class NutriUiState(
     val mealEntries: List<MealEntry> = emptyList(),
     val dailyTotals: DailyTotals = DailyTotals(),
@@ -27,10 +37,14 @@ data class NutriUiState(
     val aiQueryText: String = "",
     val geminiLoading: Boolean = false,
     val geminiError: String? = null,
-    val geminiResult: GeminiFoodResult? = null
+    val geminiResult: GeminiFoodResult? = null,
+    // Diet Planner
+    val selectedPlanGoal: PlanGoal = PlanGoal.WEIGHT_LOSS,
+    val selectedDietPref: DietPreference = DietPreference.PURE_VEG,
+    val dailyBudgetINR: Float = 150f,
+    val generatedPlan: List<MealEntry> = emptyList()
 )
 
-// ─── Serializable form for DataStore persistence (supports Catalog & AI items) ─
 data class PersistedEntry(
     val id: String,
     val foodItemId: String? = null,
@@ -58,7 +72,6 @@ data class PersistedEntry(
     }
 }
 
-// ─── ViewModel ────────────────────────────────────────────────────────────────
 class NutriViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = PrefsManager(application)
@@ -69,13 +82,11 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
     val state: StateFlow<NutriUiState> = _state.asStateFlow()
 
     init {
-        // Load API key
         viewModelScope.launch {
             prefs.geminiApiKey.collect { key ->
                 _state.update { it.copy(geminiApiKey = key) }
             }
         }
-        // Load nutrition goals
         viewModelScope.launch {
             combine(
                 prefs.caloriesGoal,
@@ -88,22 +99,20 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(nutritionGoals = goals) }
             }
         }
-        // Load persisted meal entries (both catalog and AI entries)
         viewModelScope.launch {
-            prefs.mealJson.collect { json ->
-                if (json == "[]" || json.isEmpty()) return@collect
+            val json = prefs.mealJson.first()
+            if (json != "[]" && json.isNotEmpty()) {
                 try {
                     val type = object : TypeToken<List<PersistedEntry>>() {}.type
                     val persisted: List<PersistedEntry> = gson.fromJson(json, type)
                     val entries = persisted.mapNotNull { it.toMealEntry() }
                     _state.update { it.copy(mealEntries = entries) }
                     updateTotals(entries)
-                } catch (e: Exception) { /* ignore corrupt data */ }
+                } catch (e: Exception) { }
             }
         }
     }
 
-    // ─── Meal Builder ─────────────────────────────────────────────────────────
     fun selectFood(food: FoodItem) {
         val isPiece = food.unit == FoodUnit.PIECES
         _state.update {
@@ -165,6 +174,121 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         persist(newEntries)
     }
 
+    // ─── Diet Plan Generator ──────────────────────────────────────────────────
+    fun setPlanGoal(goal: PlanGoal) {
+        _state.update { it.copy(selectedPlanGoal = goal) }
+        generateDietPlan()
+    }
+
+    fun setDietPref(pref: DietPreference) {
+        _state.update { it.copy(selectedDietPref = pref) }
+        generateDietPlan()
+    }
+
+    fun setDailyBudget(budget: Float) {
+        _state.update { it.copy(dailyBudgetINR = budget) }
+    }
+
+    fun generateDietPlan() {
+        val goal = _state.value.selectedPlanGoal
+        val pref = _state.value.selectedDietPref
+        val budget = _state.value.dailyBudgetINR
+
+        // Template items (foodId to base weight in grams)
+        val baseTemplate: List<Pair<String, Float>> = when (goal) {
+            PlanGoal.WEIGHT_LOSS -> when (pref) {
+                DietPreference.PURE_VEG -> listOf(
+                    "oats" to 60f,
+                    "soybean" to 120f,
+                    "dal_masoor" to 200f,
+                    "chapati" to 80f,
+                    "paneer_low_fat" to 100f,
+                    "curd" to 150f,
+                    "spinach" to 100f
+                )
+                DietPreference.NON_VEG -> listOf(
+                    "egg" to 150f,
+                    "egg_white" to 150f,
+                    "chicken_breast" to 200f,
+                    "rohu_fish" to 150f,
+                    "chapati" to 80f,
+                    "spinach" to 100f
+                )
+                DietPreference.BOTH -> listOf(
+                    "oats" to 50f,
+                    "egg" to 150f,
+                    "chicken_breast" to 150f,
+                    "dal_toor" to 150f,
+                    "chapati" to 80f,
+                    "curd" to 100f,
+                    "spinach" to 100f
+                )
+            }
+            PlanGoal.WEIGHT_GAIN -> when (pref) {
+                DietPreference.PURE_VEG -> listOf(
+                    "oats" to 80f,
+                    "milk_full" to 400f,
+                    "banana" to 240f,
+                    "peanuts" to 60f,
+                    "rice_cooked" to 300f,
+                    "rajma" to 200f,
+                    "paneer" to 120f,
+                    "chapati" to 120f
+                )
+                DietPreference.NON_VEG -> listOf(
+                    "egg" to 200f,
+                    "chicken_breast" to 200f,
+                    "chicken_leg" to 150f,
+                    "rice_cooked" to 350f,
+                    "chapati" to 120f,
+                    "banana" to 240f,
+                    "potato" to 150f
+                )
+                DietPreference.BOTH -> listOf(
+                    "oats" to 70f,
+                    "milk_full" to 300f,
+                    "egg" to 200f,
+                    "chicken_breast" to 180f,
+                    "rice_cooked" to 300f,
+                    "dal_toor" to 150f,
+                    "peanuts" to 50f,
+                    "banana" to 240f
+                )
+            }
+        }
+
+        val rawEntries = baseTemplate.mapNotNull { (id, weight) ->
+            val food = FoodCatalog.getById(id) ?: return@mapNotNull null
+            MealEntry(foodItem = food, weightGrams = weight)
+        }
+
+        val rawCost = rawEntries.sumOf { it.costINR.toDouble() }.toFloat()
+        // Scale portions so total cost stays within user's budget (clamped between 0.45x and 1.6x)
+        val scale = if (rawCost > 0f) (budget / rawCost).coerceIn(0.45f, 1.6f) else 1f
+
+        val scaledEntries = rawEntries.map { entry ->
+            val roundedWeight = ((entry.weightGrams * scale) / 5f).toInt().coerceAtLeast(5) * 5f
+            entry.copy(weightGrams = roundedWeight)
+        }
+
+        _state.update { it.copy(generatedPlan = scaledEntries) }
+    }
+
+    fun applyGeneratedPlanToMealLog() {
+        val plan = _state.value.generatedPlan
+        if (plan.isEmpty()) return
+        val goal = _state.value.selectedPlanGoal
+        val newGoals = if (goal == PlanGoal.WEIGHT_LOSS) {
+            NutritionGoals(caloriesGoal = 1600f, proteinGoal = 130f, carbsGoal = 150f, fatsGoal = 50f)
+        } else {
+            NutritionGoals(caloriesGoal = 2800f, proteinGoal = 160f, carbsGoal = 350f, fatsGoal = 85f)
+        }
+        saveGoals(newGoals)
+        _state.update { it.copy(mealEntries = plan, nutritionGoals = newGoals) }
+        updateTotals(plan)
+        persist(plan)
+    }
+
     // ─── Gemini ──────────────────────────────────────────────────────────────
     fun setAiQuery(text: String) {
         _state.update { it.copy(aiQueryText = text, geminiError = null) }
@@ -212,7 +336,6 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(geminiResult = null, geminiError = null) }
     }
 
-    // ─── Settings ────────────────────────────────────────────────────────────
     fun saveApiKey(key: String) {
         viewModelScope.launch { prefs.saveApiKey(key.trim()) }
     }
@@ -223,7 +346,6 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // ─── Internal helpers ─────────────────────────────────────────────────────
     private fun updateTotals(entries: List<MealEntry>) {
         val totals = DailyTotals(
             calories = entries.sumOf { it.calories.toDouble() }.toFloat(),
