@@ -30,18 +30,19 @@ data class NutriUiState(
     val geminiResult: GeminiFoodResult? = null
 )
 
-// ─── Serializable form for DataStore persistence ───────────────────────────────
+// ─── Serializable form for DataStore persistence (supports Catalog & AI items) ─
 data class PersistedEntry(
     val id: String,
-    val foodItemId: String,
+    val foodItemId: String? = null,
+    val foodItem: FoodItem? = null,
     val weightGrams: Float,
     val customPriceINRPer100: Float?
 ) {
     fun toMealEntry(): MealEntry? {
-        val food = FoodCatalog.getById(foodItemId) ?: return null
+        val resolvedFood = foodItem ?: foodItemId?.let { FoodCatalog.getById(it) } ?: return null
         return MealEntry(
             id = id,
-            foodItem = food,
+            foodItem = resolvedFood,
             weightGrams = weightGrams,
             customPriceINRPer100 = customPriceINRPer100
         )
@@ -50,6 +51,7 @@ data class PersistedEntry(
         fun from(entry: MealEntry) = PersistedEntry(
             id = entry.id,
             foodItemId = entry.foodItem.id,
+            foodItem = entry.foodItem,
             weightGrams = entry.weightGrams,
             customPriceINRPer100 = entry.customPriceINRPer100
         )
@@ -86,7 +88,7 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(nutritionGoals = goals) }
             }
         }
-        // Load persisted meal entries (catalog items only — Gemini entries are session-only)
+        // Load persisted meal entries (both catalog and AI entries)
         viewModelScope.launch {
             prefs.mealJson.collect { json ->
                 if (json == "[]" || json.isEmpty()) return@collect
@@ -203,7 +205,7 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         val newEntries = _state.value.mealEntries + entry
         _state.update { it.copy(mealEntries = newEntries, geminiResult = null, aiQueryText = "") }
         updateTotals(newEntries)
-        // Don't persist AI entries — they have no catalog ID to look up on next launch
+        persist(newEntries)
     }
 
     fun dismissGeminiResult() {
@@ -236,8 +238,7 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun persist(entries: List<MealEntry>) {
         viewModelScope.launch {
-            val persistable = entries.filter { !it.foodItem.id.startsWith("ai_") }
-            prefs.saveMealJson(gson.toJson(persistable.map { PersistedEntry.from(it) }))
+            prefs.saveMealJson(gson.toJson(entries.map { PersistedEntry.from(it) }))
         }
     }
 }
