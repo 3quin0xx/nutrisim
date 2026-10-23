@@ -26,7 +26,7 @@ data class NutriUiState(
     val mealEntries: List<MealEntry> = emptyList(),
     val dailyTotals: DailyTotals = DailyTotals(),
     val nutritionGoals: NutritionGoals = NutritionGoals(),
-    val geminiApiKey: String = "",
+    val hasCustomApiKey: Boolean = false,
     // Meal builder
     val selectedFood: FoodItem? = null,
     val quantity: Float = 100f,
@@ -83,8 +83,8 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            prefs.geminiApiKey.collect { key ->
-                _state.update { it.copy(geminiApiKey = key) }
+            prefs.hasCustomKey.collect { hasCustom ->
+                _state.update { it.copy(hasCustomApiKey = hasCustom) }
             }
         }
         viewModelScope.launch {
@@ -194,7 +194,6 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         val pref = _state.value.selectedDietPref
         val budget = _state.value.dailyBudgetINR
 
-        // Template items (foodId to base weight in grams)
         val baseTemplate: List<Pair<String, Float>> = when (goal) {
             PlanGoal.WEIGHT_LOSS -> when (pref) {
                 DietPreference.PURE_VEG -> listOf(
@@ -263,7 +262,6 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val rawCost = rawEntries.sumOf { it.costINR.toDouble() }.toFloat()
-        // Scale portions so total cost stays within user's budget (clamped between 0.45x and 1.6x)
         val scale = if (rawCost > 0f) (budget / rawCost).coerceIn(0.45f, 1.6f) else 1f
 
         val scaledEntries = rawEntries.map { entry ->
@@ -296,14 +294,10 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
 
     fun runGeminiQuery() {
         val query = _state.value.aiQueryText.trim()
-        val key = _state.value.geminiApiKey
         if (query.isEmpty()) return
-        if (key.isEmpty()) {
-            _state.update { it.copy(geminiError = "No API key — go to Settings and save your key.") }
-            return
-        }
         viewModelScope.launch {
             _state.update { it.copy(geminiLoading = true, geminiError = null, geminiResult = null) }
+            val key = prefs.effectiveApiKey.first()
             geminiService.estimateMacros(query, key).fold(
                 onSuccess = { result -> _state.update { it.copy(geminiLoading = false, geminiResult = result) } },
                 onFailure = { err -> _state.update { it.copy(geminiLoading = false, geminiError = err.message ?: "Unknown error") } }
@@ -337,7 +331,11 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveApiKey(key: String) {
-        viewModelScope.launch { prefs.saveApiKey(key.trim()) }
+        viewModelScope.launch { prefs.saveCustomApiKey(key) }
+    }
+
+    fun resetToDefaultApiKey() {
+        viewModelScope.launch { prefs.resetToBuiltInKey() }
     }
 
     fun saveGoals(goals: NutritionGoals) {

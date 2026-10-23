@@ -6,9 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +14,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nutrisim.india.data.NutritionGoals
@@ -28,8 +24,8 @@ import com.nutrisim.india.viewmodel.NutriViewModel
 fun SettingsScreen(viewModel: NutriViewModel) {
     val state by viewModel.state.collectAsState()
 
-    var apiKeyInput by remember(state.geminiApiKey) { mutableStateOf(state.geminiApiKey) }
-    var showKey     by remember { mutableStateOf(false) }
+    // Always starts blank — existing keys can never be read back from the UI
+    var apiKeyInput by remember { mutableStateOf("") }
     var keySaved    by remember { mutableStateOf(false) }
 
     var caloriesInput by remember(state.nutritionGoals) { mutableStateOf(state.nutritionGoals.caloriesGoal.toInt().toString()) }
@@ -48,33 +44,36 @@ fun SettingsScreen(viewModel: NutriViewModel) {
     ) {
         Text("Settings", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
 
-        // ── Gemini API Key card ────────────────────────────────────────────
+        // ── Gemini API Key card (Write-Only & Hidden) ──────────────────────
         SettingsCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("✨", fontSize = 16.sp)
+                Text("🔒", fontSize = 16.sp)
                 Spacer(Modifier.width(8.dp))
-                Text("Gemini API Key", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text("Gemini AI Configuration", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             }
+
             Text(
-                "Get a free key at aistudio.google.com — it starts with AIzaSy…",
+                if (state.hasCustomApiKey)
+                    "Status: Custom Override Key Active (Hidden & Encrypted)"
+                else
+                    "Status: Built-in Default AI Key Active (Ready for all users)",
+                fontSize = 12.sp,
+                color = SuccessGreen,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Text(
+                "AI Auto-Estimate works automatically out of the box. You can optionally save a custom override key below (stored keys cannot be viewed).",
                 fontSize = 11.sp, color = TextTertiary
             )
 
             OutlinedTextField(
                 value = apiKeyInput,
                 onValueChange = { apiKeyInput = it; keySaved = false },
-                label  = { Text("Paste API key here", color = TextSecondary) },
+                label  = { Text("Enter new override API key (optional)", color = TextSecondary) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(onClick = { showKey = !showKey }) {
-                        Icon(
-                            if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            null, tint = TextSecondary
-                        )
-                    }
-                },
+                visualTransformation = PasswordVisualTransformation(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = AccentTeal,
                     unfocusedBorderColor = DividerDark,
@@ -85,13 +84,36 @@ fun SettingsScreen(viewModel: NutriViewModel) {
                 shape = RoundedCornerShape(10.dp)
             )
 
-            Button(
-                onClick = { viewModel.saveApiKey(apiKeyInput); keySaved = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
-                shape  = RoundedCornerShape(10.dp)
-            ) {
-                Text(if (keySaved) "✅ Saved!" else "Save Key", color = BackgroundDark, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        if (apiKeyInput.isNotBlank()) {
+                            viewModel.saveApiKey(apiKeyInput)
+                            apiKeyInput = "" // Clear immediately so it can never be seen
+                            keySaved = true
+                        }
+                    },
+                    enabled = apiKeyInput.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
+                    shape  = RoundedCornerShape(10.dp)
+                ) {
+                    Text(if (keySaved) "✅ Key Locked!" else "Save Key", color = BackgroundDark, fontWeight = FontWeight.Bold)
+                }
+
+                if (state.hasCustomApiKey) {
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.resetToDefaultApiKey()
+                            apiKeyInput = ""
+                            keySaved = false
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                    ) {
+                        Text("Use Default")
+                    }
+                }
             }
         }
 
