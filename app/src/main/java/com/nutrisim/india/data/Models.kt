@@ -1,6 +1,5 @@
 package com.nutrisim.india.data
 
-// ─── Amino Acid Profile ────────────────────────────────────────────────────────
 data class AminoAcids(
     val leucine: Float = 0f,
     val lysine: Float = 0f,
@@ -34,7 +33,6 @@ data class AminoAcids(
     )
 }
 
-// ─── Food Enums ────────────────────────────────────────────────────────────────
 enum class FoodUnit { GRAMS, ML, PIECES }
 
 enum class FoodCategory(val displayName: String, val emoji: String) {
@@ -48,26 +46,22 @@ enum class FoodCategory(val displayName: String, val emoji: String) {
     SUPPLEMENT("Supplements", "💊")
 }
 
-// ─── Food Item ─────────────────────────────────────────────────────────────────
 data class FoodItem(
     val id: String,
     val name: String,
     val category: FoodCategory,
     val unit: FoodUnit = FoodUnit.GRAMS,
-    // Macros per 100g or 100ml
     val caloriesPer100: Float,
     val proteinPer100: Float,
     val carbsPer100: Float,
     val fatsPer100: Float,
+    val fiberPer100: Float = 0f,
     val aminoAcidsPer100: AminoAcids = AminoAcids(),
-    // For PIECES unit: grams per one piece
     val gramsPerPiece: Float = 0f,
-    // Price per 100g in INR
     val defaultPriceINRPer100: Float,
     val emoji: String = "🍽️"
 )
 
-// ─── Meal Entry ────────────────────────────────────────────────────────────────
 data class MealEntry(
     val id: String = java.util.UUID.randomUUID().toString(),
     val foodItem: FoodItem,
@@ -79,18 +73,19 @@ data class MealEntry(
     val protein get() = foodItem.proteinPer100 * scaleFactor
     val carbs get() = foodItem.carbsPer100 * scaleFactor
     val fats get() = foodItem.fatsPer100 * scaleFactor
+    val fiber get() = foodItem.fiberPer100 * scaleFactor
     val aminoAcids get() = foodItem.aminoAcidsPer100.scale(scaleFactor)
     val effectivePrice get() = customPriceINRPer100 ?: foodItem.defaultPriceINRPer100
     val costINR get() = effectivePrice * scaleFactor
     val costPerGramProtein get() = if (protein > 0.01f) costINR / protein else 0f
 }
 
-// ─── Aggregate / Goal Models ──────────────────────────────────────────────────
 data class DailyTotals(
     val calories: Float = 0f,
     val protein: Float = 0f,
     val carbs: Float = 0f,
     val fats: Float = 0f,
+    val fiber: Float = 0f,
     val totalCostINR: Float = 0f,
     val aminoAcids: AminoAcids = AminoAcids()
 )
@@ -99,10 +94,10 @@ data class NutritionGoals(
     val caloriesGoal: Float = 2000f,
     val proteinGoal: Float = 150f,
     val carbsGoal: Float = 250f,
-    val fatsGoal: Float = 65f
+    val fatsGoal: Float = 65f,
+    val fiberGoal: Float = 30f
 )
 
-// ─── Gemini Result ─────────────────────────────────────────────────────────────
 data class GeminiFoodResult(
     val name: String,
     val weightGrams: Float,
@@ -110,6 +105,7 @@ data class GeminiFoodResult(
     val proteinG: Float,
     val carbsG: Float,
     val fatsG: Float,
+    val fiberG: Float = 0f,
     val estimatedPriceINR: Float,
     val notes: String = ""
 )

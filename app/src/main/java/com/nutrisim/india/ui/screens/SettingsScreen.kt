@@ -24,7 +24,6 @@ import com.nutrisim.india.viewmodel.NutriViewModel
 fun SettingsScreen(viewModel: NutriViewModel) {
     val state by viewModel.state.collectAsState()
 
-    // Always starts blank — existing keys can never be read back from the UI
     var apiKeyInput by remember { mutableStateOf("") }
     var keySaved    by remember { mutableStateOf(false) }
 
@@ -32,6 +31,7 @@ fun SettingsScreen(viewModel: NutriViewModel) {
     var proteinInput  by remember(state.nutritionGoals) { mutableStateOf(state.nutritionGoals.proteinGoal.toInt().toString()) }
     var carbsInput    by remember(state.nutritionGoals) { mutableStateOf(state.nutritionGoals.carbsGoal.toInt().toString()) }
     var fatsInput     by remember(state.nutritionGoals) { mutableStateOf(state.nutritionGoals.fatsGoal.toInt().toString()) }
+    var fiberInput    by remember(state.nutritionGoals) { mutableStateOf(state.nutritionGoals.fiberGoal.toInt().toString()) }
     var goalsSaved    by remember { mutableStateOf(false) }
 
     Column(
@@ -44,7 +44,6 @@ fun SettingsScreen(viewModel: NutriViewModel) {
     ) {
         Text("Settings", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
 
-        // ── Gemini API Key card (Write-Only & Hidden) ──────────────────────
         SettingsCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🔒", fontSize = 16.sp)
@@ -89,7 +88,7 @@ fun SettingsScreen(viewModel: NutriViewModel) {
                     onClick = {
                         if (apiKeyInput.isNotBlank()) {
                             viewModel.saveApiKey(apiKeyInput)
-                            apiKeyInput = "" // Clear immediately so it can never be seen
+                            apiKeyInput = ""
                             keySaved = true
                         }
                     },
@@ -117,7 +116,6 @@ fun SettingsScreen(viewModel: NutriViewModel) {
             }
         }
 
-        // ── Nutrition Goals card ───────────────────────────────────────────
         SettingsCard {
             Text("Daily Nutrition Goals", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
 
@@ -125,6 +123,7 @@ fun SettingsScreen(viewModel: NutriViewModel) {
             GoalField("Target Protein (g)",     proteinInput)  { proteinInput  = it; goalsSaved = false }
             GoalField("Target Carbs (g)",        carbsInput)    { carbsInput    = it; goalsSaved = false }
             GoalField("Target Fats (g)",         fatsInput)     { fatsInput     = it; goalsSaved = false }
+            GoalField("Target Fibre (g)",        fiberInput)    { fiberInput    = it; goalsSaved = false }
 
             Button(
                 onClick = {
@@ -133,7 +132,8 @@ fun SettingsScreen(viewModel: NutriViewModel) {
                             caloriesGoal = caloriesInput.toFloatOrNull() ?: 2000f,
                             proteinGoal  = proteinInput.toFloatOrNull()  ?: 150f,
                             carbsGoal    = carbsInput.toFloatOrNull()    ?: 250f,
-                            fatsGoal     = fatsInput.toFloatOrNull()     ?: 65f
+                            fatsGoal     = fatsInput.toFloatOrNull()     ?: 65f,
+                            fiberGoal    = fiberInput.toFloatOrNull()    ?: 30f
                         )
                     )
                     goalsSaved = true
@@ -146,7 +146,6 @@ fun SettingsScreen(viewModel: NutriViewModel) {
             }
         }
 
-        // ── About card ─────────────────────────────────────────────────────
         SettingsCard {
             Text("About NutriSim India", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             Spacer(Modifier.height(4.dp))

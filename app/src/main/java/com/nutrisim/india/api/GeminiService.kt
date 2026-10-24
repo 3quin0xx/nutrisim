@@ -18,8 +18,6 @@ class GeminiService {
         .build()
 
     private val gson = Gson()
-
-    // Target gemini-3.5-flash-lite model
     private val MODEL = "gemini-3.5-flash-lite"
 
     suspend fun estimateMacros(query: String, apiKey: String): Result<GeminiFoodResult> =
@@ -37,13 +35,14 @@ class GeminiService {
                       "proteinG": 0.0,
                       "carbsG": 0.0,
                       "fatsG": 0.0,
+                      "fiberG": 0.0,
                       "estimatedPriceINR": 0.0,
                       "notes": "one brief note"
                     }
                     
                     Rules:
                     - weightGrams = total weight of the full query (e.g. if "3 paranthas" then ~225g)
-                    - All macro values are for the TOTAL weight given, not per 100g
+                    - All macro values (including fiberG) are for the TOTAL weight given, not per 100g
                     - estimatedPriceINR = realistic Indian market price in rupees
                     - Be precise; use real nutritional data
                 """.trimIndent()
@@ -88,6 +87,7 @@ class GeminiService {
                         proteinG = parsed.proteinG ?: 0f,
                         carbsG = parsed.carbsG ?: 0f,
                         fatsG = parsed.fatsG ?: 0f,
+                        fiberG = parsed.fiberG ?: 0f,
                         estimatedPriceINR = parsed.estimatedPriceINR ?: 0f,
                         notes = parsed.notes ?: ""
                     )
@@ -109,6 +109,7 @@ class GeminiService {
         val proteinG: Float?,
         val carbsG: Float?,
         val fatsG: Float?,
+        val fiberG: Float?,
         val estimatedPriceINR: Float?,
         val notes: String?
     )

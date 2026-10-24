@@ -138,7 +138,7 @@ private fun FoodRow(food: FoodItem, isSelected: Boolean, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(food.name, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
                 Text(
-                    "${food.caloriesPer100.toInt()} kcal · ${food.proteinPer100}g P · ${food.carbsPer100}g C · ${food.fatsPer100}g F /100g",
+                    "${food.caloriesPer100.toInt()} kcal · ${food.proteinPer100}g P · ${food.carbsPer100}g C · ${food.fatsPer100}g F · ${food.fiberPer100}g Fib /100g",
                     fontSize = 11.sp, color = TextSecondary
                 )
             }
@@ -151,7 +151,6 @@ private fun FoodRow(food: FoodItem, isSelected: Boolean, onClick: () -> Unit) {
 private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
     val state by viewModel.state.collectAsState()
 
-    // Local slider state prevents full-screen recomposition lag while dragging
     var localWeight by remember(food.id, state.quantity) { mutableStateOf(state.quantity) }
 
     var customPriceText by remember(food.id) {
@@ -264,13 +263,15 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 )
             }
 
+            // 5-up Live Macro Preview (including Fibre)
             val sf = localWeight / 100f
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 listOf(
                     Triple("Cal", food.caloriesPer100 * sf, CaloriesColor),
                     Triple("P",   food.proteinPer100  * sf, ProteinColor),
                     Triple("C",   food.carbsPer100    * sf, CarbsColor),
-                    Triple("F",   food.fatsPer100     * sf, FatsColor)
+                    Triple("F",   food.fatsPer100     * sf, FatsColor),
+                    Triple("Fib", food.fiberPer100    * sf, FiberColor)
                 ).forEach { (label, value, color) ->
                     Box(
                         modifier = Modifier.weight(1f)
@@ -280,7 +281,10 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${value.toInt()}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
+                            Text(
+                                if (label == "Fib") String.format("%.1f", value) else "${value.toInt()}",
+                                fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color
+                            )
                             Text(label, fontSize = 10.sp, color = TextSecondary)
                         }
                     }
@@ -375,7 +379,7 @@ private fun AiCard(viewModel: NutriViewModel) {
                         Text(result.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                         Text(
                             "${result.weightGrams.toInt()}g total · ${result.calories.toInt()} kcal · " +
-                            "${result.proteinG.toInt()}g P · ${result.carbsG.toInt()}g C · ${result.fatsG.toInt()}g F",
+                            "${result.proteinG.toInt()}g P · ${result.carbsG.toInt()}g C · ${result.fatsG.toInt()}g F · ${String.format("%.1f", result.fiberG)}g Fib",
                             fontSize = 12.sp, color = TextSecondary
                         )
                         Text("Est. ₹${String.format("%.1f", result.estimatedPriceINR)}", fontSize = 12.sp, color = AccentGold)

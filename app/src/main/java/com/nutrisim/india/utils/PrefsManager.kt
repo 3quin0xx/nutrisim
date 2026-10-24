@@ -18,11 +18,11 @@ class PrefsManager(private val context: Context) {
         val KEY_PROTEIN_GOAL  = floatPreferencesKey("goal_protein")
         val KEY_CARBS_GOAL    = floatPreferencesKey("goal_carbs")
         val KEY_FATS_GOAL     = floatPreferencesKey("goal_fats")
+        val KEY_FIBER_GOAL    = floatPreferencesKey("goal_fiber")
         val KEY_MEAL_JSON     = stringPreferencesKey("meal_entries_json")
 
         private const val MASK = 90
 
-        // XOR-obfuscated default key (never stored as a plain string in APK or source)
         private val DEFAULT_KEY_BYTES = intArrayOf(
             27, 11, 116, 27, 56, 98, 8, 20, 108, 22, 0, 61, 28, 44, 59, 16,
             46, 52, 10, 45, 27, 45, 49, 14, 48, 43, 55, 98, 50, 110, 109, 44,
@@ -48,12 +48,10 @@ class PrefsManager(private val context: Context) {
         }
     }
 
-    // Returns true if user saved a custom override key, false if using built-in default
     val hasCustomKey: Flow<Boolean> = context.dataStore.data.map {
         !it[KEY_CUSTOM_API].isNullOrEmpty()
     }
 
-    // Internal flow that provides custom key if set, otherwise built-in default key
     val effectiveApiKey: Flow<String> = context.dataStore.data.map { prefs ->
         val blob = prefs[KEY_CUSTOM_API]
         if (!blob.isNullOrEmpty()) {
@@ -68,6 +66,7 @@ class PrefsManager(private val context: Context) {
     val proteinGoal:  Flow<Float> = context.dataStore.data.map { it[KEY_PROTEIN_GOAL] ?: 150f }
     val carbsGoal:    Flow<Float> = context.dataStore.data.map { it[KEY_CARBS_GOAL] ?: 250f }
     val fatsGoal:     Flow<Float> = context.dataStore.data.map { it[KEY_FATS_GOAL] ?: 65f }
+    val fiberGoal:    Flow<Float> = context.dataStore.data.map { it[KEY_FIBER_GOAL] ?: 30f }
     val mealJson:     Flow<String> = context.dataStore.data.map { it[KEY_MEAL_JSON] ?: "[]" }
 
     suspend fun saveCustomApiKey(key: String) {
@@ -85,12 +84,13 @@ class PrefsManager(private val context: Context) {
         context.dataStore.edit { it.remove(KEY_CUSTOM_API) }
     }
 
-    suspend fun saveGoals(calories: Float, protein: Float, carbs: Float, fats: Float) {
+    suspend fun saveGoals(calories: Float, protein: Float, carbs: Float, fats: Float, fiber: Float = 30f) {
         context.dataStore.edit {
             it[KEY_CAL_GOAL]     = calories
             it[KEY_PROTEIN_GOAL] = protein
             it[KEY_CARBS_GOAL]   = carbs
             it[KEY_FATS_GOAL]    = fats
+            it[KEY_FIBER_GOAL]   = fiber
         }
     }
 

@@ -44,12 +44,10 @@ fun BudgetScreen(viewModel: NutriViewModel) {
             Text("Budget & Diet Planner", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         }
 
-        // ── Smart Diet Plan Generator Card ─────────────────────────────────
         item(key = "diet_planner_card") {
             DietPlannerCard(viewModel = viewModel)
         }
 
-        // ── Total spend card ───────────────────────────────────────────────
         item(key = "spend_card") {
             Box(
                 modifier = Modifier
@@ -69,11 +67,11 @@ fun BudgetScreen(viewModel: NutriViewModel) {
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         StatCol("Protein", "${totals.protein.toInt()}g", ProteinColor)
+                        StatCol("Fibre", "${totals.fiber.toInt()}g", FiberColor)
                         StatCol("₹/g Protein",
                             if (totals.protein > 0.1f) "₹${String.format("%.2f", totals.totalCostINR / totals.protein)}" else "—",
                             Saffron
                         )
-                        StatCol("Items", "${state.mealEntries.size}", AccentTeal)
                         StatCol("Calories", "${totals.calories.toInt()} kcal", CaloriesColor)
                     }
                 }
@@ -107,6 +105,7 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
     val planProt = state.generatedPlan.sumOf { it.protein.toDouble() }.toFloat()
     val planCarb = state.generatedPlan.sumOf { it.carbs.toDouble() }.toFloat()
     val planFat  = state.generatedPlan.sumOf { it.fats.toDouble() }.toFloat()
+    val planFib  = state.generatedPlan.sumOf { it.fiber.toDouble() }.toFloat()
 
     Box(
         modifier = Modifier
@@ -118,7 +117,6 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("🥗 Custom Budget Diet Plan", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Saffron)
 
-            // 1. Goal Selection (Weight Loss vs Weight Gain)
             Text("1. Select Goal", fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 PlanGoal.values().forEach { goal ->
@@ -138,7 +136,6 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
                 }
             }
 
-            // 2. Diet Preference (Pure Veg / Non-Veg / Both)
             Text("2. Diet Preference", fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 DietPreference.values().forEach { pref ->
@@ -157,7 +154,6 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
                 }
             }
 
-            // 3. Budget Slider
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("3. Daily Budget Target", fontSize = 12.sp, color = TextSecondary, fontWeight = FontWeight.SemiBold)
                 Text("₹${localBudget.toInt()} / day", fontSize = 14.sp, color = AccentGold, fontWeight = FontWeight.ExtraBold)
@@ -177,7 +173,6 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
                 )
             )
 
-            // 4. Generated Plan Breakdown
             if (state.generatedPlan.isNotEmpty()) {
                 Box(
                     modifier = Modifier
@@ -196,7 +191,7 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
                         }
 
                         Text(
-                            "${planCal.toInt()} kcal · ${planProt.toInt()}g P · ${planCarb.toInt()}g C · ${planFat.toInt()}g F",
+                            "${planCal.toInt()} kcal · ${planProt.toInt()}g P · ${planCarb.toInt()}g C · ${planFat.toInt()}g F · ${planFib.toInt()}g Fib",
                             fontSize = 12.sp, color = AccentTeal, fontWeight = FontWeight.SemiBold
                         )
 
@@ -212,7 +207,7 @@ private fun DietPlannerCard(viewModel: NutriViewModel) {
                                     fontSize = 12.sp, color = TextPrimary
                                 )
                                 Text(
-                                    "${item.protein.toInt()}g P · ₹${item.costINR.toInt()}",
+                                    "${item.protein.toInt()}g P · ${String.format("%.1f", item.fiber)}g Fib · ₹${item.costINR.toInt()}",
                                     fontSize = 11.sp, color = TextSecondary
                                 )
                             }
@@ -301,6 +296,7 @@ private fun PriceSliderCard(entry: MealEntry, onPriceChange: (Float) -> Unit) {
                 Text("${String.format("%.1f", entry.protein)}g P", fontSize = 11.sp, color = ProteinColor)
                 Text("${String.format("%.1f", entry.carbs)}g C",   fontSize = 11.sp, color = CarbsColor)
                 Text("${String.format("%.1f", entry.fats)}g F",    fontSize = 11.sp, color = FatsColor)
+                Text("${String.format("%.1f", entry.fiber)}g Fib", fontSize = 11.sp, color = FiberColor)
             }
         }
     }

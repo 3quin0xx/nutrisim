@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nutrisim.india.ui.theme.*
 
-// ─── Macro Donut Pie Chart ────────────────────────────────────────────────────
 @Composable
 fun MacroPieChart(
     protein: Float,
@@ -76,13 +75,11 @@ fun MacroPieChart(
                     startAngle += sweep
                 }
 
-                // Background track when empty
                 if (isEmpty) {
                     drawCircle(color = CardDark2, radius = radius, center = Offset(cx, cy), style = Stroke(width = strokeWidth))
                 }
             }
 
-            // Centre label
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = if (isEmpty) "—" else "${totalCalories.toInt()}",
@@ -96,7 +93,6 @@ fun MacroPieChart(
 
         Spacer(Modifier.height(14.dp))
 
-        // Legend row
         if (!isEmpty) {
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -122,12 +118,12 @@ fun MacroPieChart(
     }
 }
 
-// ─── Macro Progress Bar Chart ─────────────────────────────────────────────────
 @Composable
 fun MacroBarChart(
     protein: Float, proteinGoal: Float,
     carbs: Float,   carbsGoal: Float,
     fats: Float,    fatsGoal: Float,
+    fiber: Float = 0f, fiberGoal: Float = 30f,
     calories: Float, caloriesGoal: Float,
     modifier: Modifier = Modifier
 ) {
@@ -137,16 +133,17 @@ fun MacroBarChart(
         Bar("Calories", calories, caloriesGoal, CaloriesColor, "kcal"),
         Bar("Protein",  protein,  proteinGoal,  ProteinColor,  "g"),
         Bar("Carbs",    carbs,    carbsGoal,    CarbsColor,    "g"),
-        Bar("Fats",     fats,     fatsGoal,     FatsColor,     "g")
+        Bar("Fats",     fats,     fatsGoal,     FatsColor,     "g"),
+        Bar("Fibre",    fiber,    fiberGoal,    FiberColor,    "g")
     )
 
-    var triggered by remember(protein, carbs, fats, calories) { mutableStateOf(false) }
+    var triggered by remember(protein, carbs, fats, fiber, calories) { mutableStateOf(false) }
     val progress by animateFloatAsState(
         targetValue = if (triggered) 1f else 0f,
         animationSpec = tween(900, easing = FastOutSlowInEasing),
         label = "bars"
     )
-    LaunchedEffect(protein, carbs, fats, calories) { triggered = true }
+    LaunchedEffect(protein, carbs, fats, fiber, calories) { triggered = true }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         bars.forEach { bar ->
@@ -168,13 +165,11 @@ fun MacroBarChart(
                 Spacer(Modifier.height(5.dp))
 
                 Canvas(modifier = Modifier.fillMaxWidth().height(12.dp)) {
-                    // Track
                     drawRoundRect(
                         color        = CardDark2,
                         cornerRadius = CornerRadius(6f),
                         size         = size
                     )
-                    // Fill
                     val fillW = (size.width * fraction.coerceIn(0f, 1f) * progress)
                     if (fillW > 0f) {
                         drawRoundRect(
@@ -183,7 +178,6 @@ fun MacroBarChart(
                             size         = Size(fillW, size.height)
                         )
                     }
-                    // Overshoot marker
                     if (isOver && progress >= 1f) {
                         drawRoundRect(
                             color        = ErrorRed.copy(alpha = 0.8f),
@@ -198,7 +192,6 @@ fun MacroBarChart(
     }
 }
 
-// ─── Amino Acid Column Chart ──────────────────────────────────────────────────
 @Composable
 fun AminoAcidChart(
     leucine: Float,
@@ -208,7 +201,6 @@ fun AminoAcidChart(
     isoleucine: Float,
     modifier: Modifier = Modifier
 ) {
-    // RDA for a 70kg adult (g/day — WHO)
     data class AminoBar(val name: String, val value: Float, val rda: Float, val color: Color)
 
     val bars = listOf(
@@ -244,14 +236,12 @@ fun AminoAcidChart(
                 val rdaY = size.height - (bar.rda / maxRda * size.height)
                 val barH = (bar.value / maxRda * size.height) * progress
 
-                // RDA line
                 drawRect(
                     color   = Color.White.copy(alpha = 0.25f),
                     topLeft = Offset(x, rdaY),
                     size    = Size(barW, 2f)
                 )
 
-                // Bar
                 if (barH > 0f) {
                     val barTop = size.height - barH
                     drawRoundRect(

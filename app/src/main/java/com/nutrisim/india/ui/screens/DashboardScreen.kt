@@ -34,7 +34,6 @@ fun DashboardScreen(viewModel: NutriViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Header
         Column {
             Text("Today's Summary", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
             Text(
@@ -43,22 +42,21 @@ fun DashboardScreen(viewModel: NutriViewModel) {
             )
         }
 
-        // Cost card
         CostSummaryCard(
             totalCost = totals.totalCostINR,
             costPerGramProtein = proteinCostPer,
             modifier = Modifier.fillMaxWidth()
         )
 
-        // 4-up macro cards
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MacroCard("Calories", totals.calories, "kcal", CaloriesColor, Modifier.weight(1f))
-            MacroCard("Protein",  totals.protein,  "g",    ProteinColor,  Modifier.weight(1f))
-            MacroCard("Carbs",    totals.carbs,    "g",    CarbsColor,    Modifier.weight(1f))
-            MacroCard("Fats",     totals.fats,     "g",    FatsColor,     Modifier.weight(1f))
+        // 5-up macro cards (including Fibre)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            MacroCard("Cal",     totals.calories, "kcal", CaloriesColor, Modifier.weight(1f))
+            MacroCard("Protein", totals.protein,  "g",    ProteinColor,  Modifier.weight(1f))
+            MacroCard("Carbs",   totals.carbs,    "g",    CarbsColor,    Modifier.weight(1f))
+            MacroCard("Fats",    totals.fats,     "g",    FatsColor,     Modifier.weight(1f))
+            MacroCard("Fibre",   totals.fiber,    "g",    FiberColor,    Modifier.weight(1f))
         }
 
-        // Pie chart card
         ChartCard(title = "Macro Split") {
             MacroPieChart(
                 protein = totals.protein,
@@ -69,18 +67,17 @@ fun DashboardScreen(viewModel: NutriViewModel) {
             )
         }
 
-        // Progress bars card
         ChartCard(title = "Goals Progress") {
             MacroBarChart(
                 protein      = totals.protein,  proteinGoal  = goals.proteinGoal,
                 carbs        = totals.carbs,    carbsGoal    = goals.carbsGoal,
                 fats         = totals.fats,     fatsGoal     = goals.fatsGoal,
+                fiber        = totals.fiber,    fiberGoal    = goals.fiberGoal,
                 calories     = totals.calories, caloriesGoal = goals.caloriesGoal,
                 modifier = Modifier.fillMaxWidth()
             )
         }
 
-        // Amino acid chart — only if protein has been logged
         if (totals.protein > 1f) {
             ChartCard(title = "Amino Acid Profile", subtitle = "vs. WHO daily RDA (white lines)") {
                 AminoAcidChart(
@@ -94,7 +91,6 @@ fun DashboardScreen(viewModel: NutriViewModel) {
             }
         }
 
-        // Meal log
         if (state.mealEntries.isNotEmpty()) {
             ChartCard(title = "Logged Meals") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -111,7 +107,7 @@ fun DashboardScreen(viewModel: NutriViewModel) {
                                 )
                                 Text(
                                     "${entry.weightGrams.toInt()}g · ${entry.calories.toInt()} kcal · " +
-                                    "${String.format("%.1f", entry.protein)}g P · ₹${String.format("%.1f", entry.costINR)}",
+                                    "${String.format("%.1f", entry.protein)}g P · ${String.format("%.1f", entry.fiber)}g Fib · ₹${String.format("%.1f", entry.costINR)}",
                                     fontSize = 11.sp, color = TextSecondary
                                 )
                             }

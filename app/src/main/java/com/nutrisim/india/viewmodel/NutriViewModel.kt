@@ -27,18 +27,15 @@ data class NutriUiState(
     val dailyTotals: DailyTotals = DailyTotals(),
     val nutritionGoals: NutritionGoals = NutritionGoals(),
     val hasCustomApiKey: Boolean = false,
-    // Meal builder
     val selectedFood: FoodItem? = null,
     val quantity: Float = 100f,
     val pieceCount: Int = 1,
     val useCustomPrice: Boolean = false,
     val customPriceInput: Float? = null,
-    // AI
     val aiQueryText: String = "",
     val geminiLoading: Boolean = false,
     val geminiError: String? = null,
     val geminiResult: GeminiFoodResult? = null,
-    // Diet Planner
     val selectedPlanGoal: PlanGoal = PlanGoal.WEIGHT_LOSS,
     val selectedDietPref: DietPreference = DietPreference.PURE_VEG,
     val dailyBudgetINR: Float = 150f,
@@ -92,9 +89,10 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.caloriesGoal,
                 prefs.proteinGoal,
                 prefs.carbsGoal,
-                prefs.fatsGoal
-            ) { cal, prot, carb, fat ->
-                NutritionGoals(cal, prot, carb, fat)
+                prefs.fatsGoal,
+                prefs.fiberGoal
+            ) { cal, prot, carb, fat, fib ->
+                NutritionGoals(cal, prot, carb, fat, fib)
             }.collect { goals ->
                 _state.update { it.copy(nutritionGoals = goals) }
             }
@@ -174,7 +172,6 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         persist(newEntries)
     }
 
-    // ─── Diet Plan Generator ──────────────────────────────────────────────────
     fun setPlanGoal(goal: PlanGoal) {
         _state.update { it.copy(selectedPlanGoal = goal) }
         generateDietPlan()
@@ -277,9 +274,9 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         if (plan.isEmpty()) return
         val goal = _state.value.selectedPlanGoal
         val newGoals = if (goal == PlanGoal.WEIGHT_LOSS) {
-            NutritionGoals(caloriesGoal = 1600f, proteinGoal = 130f, carbsGoal = 150f, fatsGoal = 50f)
+            NutritionGoals(caloriesGoal = 1600f, proteinGoal = 130f, carbsGoal = 150f, fatsGoal = 50f, fiberGoal = 30f)
         } else {
-            NutritionGoals(caloriesGoal = 2800f, proteinGoal = 160f, carbsGoal = 350f, fatsGoal = 85f)
+            NutritionGoals(caloriesGoal = 2800f, proteinGoal = 160f, carbsGoal = 350f, fatsGoal = 85f, fiberGoal = 35f)
         }
         saveGoals(newGoals)
         _state.update { it.copy(mealEntries = plan, nutritionGoals = newGoals) }
@@ -287,7 +284,6 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
         persist(plan)
     }
 
-    // ─── Gemini ──────────────────────────────────────────────────────────────
     fun setAiQuery(text: String) {
         _state.update { it.copy(aiQueryText = text, geminiError = null) }
     }
@@ -316,6 +312,7 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
             proteinPer100 = (result.proteinG / w) * 100f,
             carbsPer100 = (result.carbsG / w) * 100f,
             fatsPer100 = (result.fatsG / w) * 100f,
+            fiberPer100 = (result.fiberG / w) * 100f,
             defaultPriceINRPer100 = (result.estimatedPriceINR / w) * 100f,
             emoji = "✨"
         )
@@ -340,7 +337,7 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveGoals(goals: NutritionGoals) {
         viewModelScope.launch {
-            prefs.saveGoals(goals.caloriesGoal, goals.proteinGoal, goals.carbsGoal, goals.fatsGoal)
+            prefs.saveGoals(goals.caloriesGoal, goals.proteinGoal, goals.carbsGoal, goals.fatsGoal, goals.fiberGoal)
         }
     }
 
@@ -350,6 +347,7 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
             protein = entries.sumOf { it.protein.toDouble() }.toFloat(),
             carbs = entries.sumOf { it.carbs.toDouble() }.toFloat(),
             fats = entries.sumOf { it.fats.toDouble() }.toFloat(),
+            fiber = entries.sumOf { it.fiber.toDouble() }.toFloat(),
             totalCostINR = entries.sumOf { it.costINR.toDouble() }.toFloat(),
             aminoAcids = entries.fold(AminoAcids()) { acc, e -> acc + e.aminoAcids }
         )
