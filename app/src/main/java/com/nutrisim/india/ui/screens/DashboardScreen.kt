@@ -78,16 +78,25 @@ fun DashboardScreen(viewModel: NutriViewModel) {
             )
         }
 
+        if (totals.sodiumMg > 5f || totals.presentVitamins.isNotEmpty() || totals.presentMinerals.isNotEmpty()) {
+            ChartCard(title = "Salt, Vitamins & Minerals (Present Today)") {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (totals.sodiumMg > 5f) {
+                        Text("🧂 Salt Intake: ${String.format("%.2f", totals.saltGrams)}g (${totals.sodiumMg.toInt()} mg Sodium)", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (totals.presentVitamins.isNotEmpty()) {
+                        Text("💊 Active Vitamins: ${totals.presentVitamins}", fontSize = 12.sp, color = Saffron)
+                    }
+                    if (totals.presentMinerals.isNotEmpty()) {
+                        Text("🪨 Active Minerals: ${totals.presentMinerals}", fontSize = 12.sp, color = LightGreen)
+                    }
+                }
+            }
+        }
+
         if (totals.protein > 1f) {
             ChartCard(title = "Amino Acid Profile", subtitle = "vs. WHO daily RDA (white lines)") {
-                AminoAcidChart(
-                    leucine    = totals.aminoAcids.leucine,
-                    lysine     = totals.aminoAcids.lysine,
-                    methionine = totals.aminoAcids.methionine,
-                    valine     = totals.aminoAcids.valine,
-                    isoleucine = totals.aminoAcids.isoleucine,
-                    modifier   = Modifier.fillMaxWidth()
-                )
+                AminoAcidChart(aminoAcids = totals.aminoAcids, modifier = Modifier.fillMaxWidth())
             }
         }
 

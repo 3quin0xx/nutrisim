@@ -291,6 +291,20 @@ private fun FoodDetailPanel(food: FoodItem, viewModel: NutriViewModel) {
                 }
             }
 
+            val scaledAminos = food.aminoAcidsPer100.scale(sf).formatPresent().ifEmpty { food.customAminosText }
+            val scaledNa = food.sodiumMgPer100 * sf
+            val scaledSalt = (scaledNa * 2.5f) / 1000f
+            if (scaledNa > 5f || scaledAminos.isNotEmpty() || food.vitamins.isNotEmpty() || food.minerals.isNotEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(CardDark).padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (scaledNa > 5f) Text("🧂 Salt: ${String.format("%.2f", scaledSalt)}g (${scaledNa.toInt()}mg Sodium)", fontSize = 11.sp, color = TextPrimary)
+                    if (scaledAminos.isNotEmpty()) Text("🧬 Essential Aminos: $scaledAminos", fontSize = 11.sp, color = AccentTeal)
+                    if (food.vitamins.isNotEmpty()) Text("💊 Vitamins: ${food.vitamins}", fontSize = 11.sp, color = Saffron)
+                    if (food.minerals.isNotEmpty()) Text("🪨 Minerals: ${food.minerals}", fontSize = 11.sp, color = LightGreen)
+                }
+            }
             val displayPrice = if (state.useCustomPrice) state.customPriceInput ?: 0f else food.defaultPriceINRPer100
             Text("Cost: ₹${String.format("%.1f", displayPrice * sf)}", fontSize = 13.sp, color = AccentGold, fontWeight = FontWeight.SemiBold)
 
@@ -382,6 +396,10 @@ private fun AiCard(viewModel: NutriViewModel) {
                             "${result.proteinG.toInt()}g P · ${result.carbsG.toInt()}g C · ${result.fatsG.toInt()}g F · ${String.format("%.1f", result.fiberG)}g Fib",
                             fontSize = 12.sp, color = TextSecondary
                         )
+                        if (result.sodiumMg > 5f) Text("🧂 Salt: ${String.format("%.2f", (result.sodiumMg * 2.5f) / 1000f)}g (${result.sodiumMg.toInt()}mg Na)", fontSize = 11.sp, color = TextPrimary)
+                        if (result.essentialAminoAcids.isNotBlank()) Text("🧬 EAAs: ${result.essentialAminoAcids}", fontSize = 11.sp, color = AccentTeal)
+                        if (result.vitamins.isNotBlank()) Text("💊 Vitamins: ${result.vitamins}", fontSize = 11.sp, color = Saffron)
+                        if (result.minerals.isNotBlank()) Text("🪨 Minerals: ${result.minerals}", fontSize = 11.sp, color = LightGreen)
                         Text("Est. ₹${String.format("%.1f", result.estimatedPriceINR)}", fontSize = 12.sp, color = AccentGold)
                         if (result.notes.isNotEmpty()) {
                             Text(result.notes, fontSize = 11.sp, color = TextTertiary)

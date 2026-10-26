@@ -194,77 +194,52 @@ fun MacroBarChart(
 
 @Composable
 fun AminoAcidChart(
-    leucine: Float,
-    lysine: Float,
-    methionine: Float,
-    valine: Float,
-    isoleucine: Float,
+    aminoAcids: com.nutrisim.india.data.AminoAcids,
     modifier: Modifier = Modifier
 ) {
     data class AminoBar(val name: String, val value: Float, val rda: Float, val color: Color)
 
-    val bars = listOf(
-        AminoBar("Leu", leucine,    2.73f, Color(0xFF7C4DFF)),
-        AminoBar("Lys", lysine,     2.10f, Color(0xFF00BCD4)),
-        AminoBar("Met", methionine, 1.05f, Color(0xFFFF5722)),
-        AminoBar("Val", valine,     1.82f, Color(0xFF8BC34A)),
-        AminoBar("Ile", isoleucine, 1.40f, Color(0xFFFF9800))
-    )
+    val allBars = listOf(
+        AminoBar("Leu", aminoAcids.leucine,       2.73f, Color(0xFF7C4DFF)),
+        AminoBar("Lys", aminoAcids.lysine,        2.10f, Color(0xFF00BCD4)),
+        AminoBar("Val", aminoAcids.valine,        1.82f, Color(0xFF8BC34A)),
+        AminoBar("Ile", aminoAcids.isoleucine,    1.40f, Color(0xFFFF9800)),
+        AminoBar("Thr", aminoAcids.threonine,     1.05f, Color(0xFF26A69A)),
+        AminoBar("Phe", aminoAcids.phenylalanine, 1.75f, Color(0xFFEC407A)),
+        AminoBar("Met", aminoAcids.methionine,    1.05f, Color(0xFFFF5722)),
+        AminoBar("His", aminoAcids.histidine,     0.70f, Color(0xFF42A5F5)),
+        AminoBar("Trp", aminoAcids.tryptophan,    0.28f, Color(0xFFFFCA28))
+    ).filter { it.value > 0.01f }
 
-    val maxRda = bars.maxOf { it.rda } * 1.3f
-
-    var triggered by remember(leucine) { mutableStateOf(false) }
-    val progress by animateFloatAsState(
-        targetValue = if (triggered) 1f else 0f,
-        animationSpec = tween(900, easing = FastOutSlowInEasing),
-        label = "amino"
-    )
-    LaunchedEffect(leucine) { triggered = true }
+    if (allBars.isEmpty()) return
+    val maxRda = allBars.maxOf { maxOf(it.rda, it.value) } * 1.25f
 
     Column(modifier = modifier) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(110.dp)
-        ) {
-            val slotW   = size.width / bars.size
-            val barW    = slotW * 0.55f
-            val offsetX = (slotW - barW) / 2f
-
-            bars.forEachIndexed { i, bar ->
-                val x    = i * slotW + offsetX
+        Canvas(modifier = Modifier.fillMaxWidth().height(110.dp)) {
+            val slotW = size.width / allBars.size
+            val barW  = slotW * 0.55f
+            val offX  = (slotW - barW) / 2f
+            allBars.forEachIndexed { i, bar ->
+                val x    = i * slotW + offX
                 val rdaY = size.height - (bar.rda / maxRda * size.height)
-                val barH = (bar.value / maxRda * size.height) * progress
-
-                drawRect(
-                    color   = Color.White.copy(alpha = 0.25f),
-                    topLeft = Offset(x, rdaY),
-                    size    = Size(barW, 2f)
-                )
-
+                val barH = (bar.value / maxRda * size.height)
+                drawRect(color = Color.White.copy(alpha = 0.25f), topLeft = Offset(x, rdaY), size = Size(barW, 2f))
                 if (barH > 0f) {
-                    val barTop = size.height - barH
                     drawRoundRect(
-                        color        = bar.color.copy(alpha = 0.88f),
-                        topLeft      = Offset(x, barTop),
-                        size         = Size(barW, barH),
+                        color = bar.color.copy(alpha = 0.88f),
+                        topLeft = Offset(x, size.height - barH),
+                        size = Size(barW, barH),
                         cornerRadius = CornerRadius(4f)
                     )
                 }
             }
         }
-
         Spacer(Modifier.height(6.dp))
-
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-            bars.forEach { bar ->
+            allBars.forEach { bar ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(bar.name, fontSize = 11.sp, color = bar.color, fontWeight = FontWeight.Bold)
-                    Text(
-                        text = if (bar.value > 0f) "${String.format("%.1f", bar.value)}g" else "—",
-                        fontSize = 10.sp,
-                        color = TextTertiary
-                    )
+                    Text(bar.name, fontSize = 10.sp, color = bar.color, fontWeight = FontWeight.Bold)
+                    Text("${String.format("%.2f", bar.value)}g", fontSize = 9.sp, color = TextSecondary)
                 }
             }
         }

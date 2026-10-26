@@ -313,6 +313,10 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
             carbsPer100 = (result.carbsG / w) * 100f,
             fatsPer100 = (result.fatsG / w) * 100f,
             fiberPer100 = (result.fiberG / w) * 100f,
+            sodiumMgPer100 = (result.sodiumMg / w) * 100f,
+            vitamins = result.vitamins,
+            minerals = result.minerals,
+            customAminosText = result.essentialAminoAcids,
             defaultPriceINRPer100 = (result.estimatedPriceINR / w) * 100f,
             emoji = "✨"
         )
@@ -349,7 +353,10 @@ class NutriViewModel(application: Application) : AndroidViewModel(application) {
             fats = entries.sumOf { it.fats.toDouble() }.toFloat(),
             fiber = entries.sumOf { it.fiber.toDouble() }.toFloat(),
             totalCostINR = entries.sumOf { it.costINR.toDouble() }.toFloat(),
-            aminoAcids = entries.fold(AminoAcids()) { acc, e -> acc + e.aminoAcids }
+            sodiumMg = entries.sumOf { it.sodiumMg.toDouble() }.toFloat(),
+            aminoAcids = entries.fold(AminoAcids()) { acc, e -> acc + e.aminoAcids },
+            presentVitamins = entries.mapNotNull { it.foodItem.vitamins.takeIf { v -> v.isNotBlank() } }.flatMap { it.split(",") }.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString(" · "),
+            presentMinerals = entries.mapNotNull { it.foodItem.minerals.takeIf { m -> m.isNotBlank() } }.flatMap { it.split(",") }.map { it.trim() }.filter { it.isNotEmpty() }.distinct().joinToString(" · ")
         )
         _state.update { it.copy(dailyTotals = totals) }
     }

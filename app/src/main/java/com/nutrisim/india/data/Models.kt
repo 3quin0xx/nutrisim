@@ -8,42 +8,37 @@ data class AminoAcids(
     val isoleucine: Float = 0f,
     val threonine: Float = 0f,
     val phenylalanine: Float = 0f,
-    val tryptophan: Float = 0f
+    val tryptophan: Float = 0f,
+    val histidine: Float = 0f
 ) {
     fun scale(factor: Float) = AminoAcids(
-        leucine = leucine * factor,
-        lysine = lysine * factor,
-        methionine = methionine * factor,
-        valine = valine * factor,
-        isoleucine = isoleucine * factor,
-        threonine = threonine * factor,
-        phenylalanine = phenylalanine * factor,
-        tryptophan = tryptophan * factor
+        leucine * factor, lysine * factor, methionine * factor,
+        valine * factor, isoleucine * factor, threonine * factor,
+        phenylalanine * factor, tryptophan * factor, histidine * factor
     )
 
     operator fun plus(other: AminoAcids) = AminoAcids(
-        leucine = leucine + other.leucine,
-        lysine = lysine + other.lysine,
-        methionine = methionine + other.methionine,
-        valine = valine + other.valine,
-        isoleucine = isoleucine + other.isoleucine,
-        threonine = threonine + other.threonine,
-        phenylalanine = phenylalanine + other.phenylalanine,
-        tryptophan = tryptophan + other.tryptophan
+        leucine + other.leucine, lysine + other.lysine, methionine + other.methionine,
+        valine + other.valine, isoleucine + other.isoleucine, threonine + other.threonine,
+        phenylalanine + other.phenylalanine, tryptophan + other.tryptophan, histidine + other.histidine
     )
+
+    fun presentEntries(): List<Pair<String, Float>> = listOf(
+        "Leu" to leucine, "Lys" to lysine, "Val" to valine,
+        "Ile" to isoleucine, "Thr" to threonine, "Phe" to phenylalanine,
+        "Met" to methionine, "His" to histidine, "Trp" to tryptophan
+    ).filter { it.second > 0.02f }
+
+    fun formatPresent(): String = presentEntries()
+        .joinToString(" · ") { "${it.first}${String.format("%.2f", it.second)}g" }
 }
 
 enum class FoodUnit { GRAMS, ML, PIECES }
 
 enum class FoodCategory(val displayName: String, val emoji: String) {
-    GRAIN("Grains", "🌾"),
-    PROTEIN("Protein", "🥩"),
-    DAIRY("Dairy", "🥛"),
-    LEGUME("Legumes", "🫘"),
-    VEGETABLE("Vegetables", "🥦"),
-    FRUIT("Fruits", "🍌"),
-    FAT("Fats & Oils", "🫙"),
-    SUPPLEMENT("Supplements", "💊")
+    GRAIN("Grains", "🌾"), PROTEIN("Protein", "🥩"), DAIRY("Dairy", "🥛"),
+    LEGUME("Legumes", "🫘"), VEGETABLE("Vegetables", "🥦"), FRUIT("Fruits", "🍌"),
+    FAT("Fats & Oils", "🫙"), SUPPLEMENT("Supplements", "💊")
 }
 
 data class FoodItem(
@@ -56,6 +51,10 @@ data class FoodItem(
     val carbsPer100: Float,
     val fatsPer100: Float,
     val fiberPer100: Float = 0f,
+    val sodiumMgPer100: Float = 0f,
+    val vitamins: String = "",
+    val minerals: String = "",
+    val customAminosText: String = "",
     val aminoAcidsPer100: AminoAcids = AminoAcids(),
     val gramsPerPiece: Float = 0f,
     val defaultPriceINRPer100: Float,
@@ -74,6 +73,8 @@ data class MealEntry(
     val carbs get() = foodItem.carbsPer100 * scaleFactor
     val fats get() = foodItem.fatsPer100 * scaleFactor
     val fiber get() = foodItem.fiberPer100 * scaleFactor
+    val sodiumMg get() = foodItem.sodiumMgPer100 * scaleFactor
+    val saltGrams get() = (sodiumMg * 2.5f) / 1000f
     val aminoAcids get() = foodItem.aminoAcidsPer100.scale(scaleFactor)
     val effectivePrice get() = customPriceINRPer100 ?: foodItem.defaultPriceINRPer100
     val costINR get() = effectivePrice * scaleFactor
@@ -86,9 +87,14 @@ data class DailyTotals(
     val carbs: Float = 0f,
     val fats: Float = 0f,
     val fiber: Float = 0f,
+    val sodiumMg: Float = 0f,
     val totalCostINR: Float = 0f,
-    val aminoAcids: AminoAcids = AminoAcids()
-)
+    val aminoAcids: AminoAcids = AminoAcids(),
+    val presentVitamins: String = "",
+    val presentMinerals: String = ""
+) {
+    val saltGrams get() = (sodiumMg * 2.5f) / 1000f
+}
 
 data class NutritionGoals(
     val caloriesGoal: Float = 2000f,
@@ -106,6 +112,10 @@ data class GeminiFoodResult(
     val carbsG: Float,
     val fatsG: Float,
     val fiberG: Float = 0f,
+    val sodiumMg: Float = 0f,
+    val essentialAminoAcids: String = "",
+    val vitamins: String = "",
+    val minerals: String = "",
     val estimatedPriceINR: Float,
     val notes: String = ""
 )

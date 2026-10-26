@@ -36,6 +36,10 @@ class GeminiService {
                       "carbsG": 0.0,
                       "fatsG": 0.0,
                       "fiberG": 0.0,
+                      "sodiumMg": 0.0,
+                      "essentialAminoAcids": "only present EAAs with grams",
+                      "vitamins": "only present vitamins",
+                      "minerals": "only present minerals",
                       "estimatedPriceINR": 0.0,
                       "notes": "one brief note"
                     }
@@ -88,6 +92,10 @@ class GeminiService {
                         carbsG = parsed.carbsG ?: 0f,
                         fatsG = parsed.fatsG ?: 0f,
                         fiberG = parsed.fiberG ?: 0f,
+                        sodiumMg = parsed.sodiumMg ?: 0f,
+                        essentialAminoAcids = parsed.essentialAminoAcids ?: "",
+                        vitamins = parsed.vitamins ?: "",
+                        minerals = parsed.minerals ?: "",
                         estimatedPriceINR = parsed.estimatedPriceINR ?: 0f,
                         notes = parsed.notes ?: ""
                     )
@@ -110,6 +118,10 @@ class GeminiService {
         val carbsG: Float?,
         val fatsG: Float?,
         val fiberG: Float?,
+        val sodiumMg: Float?,
+        val essentialAminoAcids: String?,
+        val vitamins: String?,
+        val minerals: String?,
         val estimatedPriceINR: Float?,
         val notes: String?
     )
